@@ -13,8 +13,8 @@ public class LibraryService {
         bookRepository.save(book);
     }
 
-    public void borrowBook(String isbn, Member member) {
-        Book book = bookRepository.findByID(isbn);
+    public void borrowBook(String id, Member member) {
+        Book book = bookRepository.findByID(id);
         if (book != null && book.isAvailable()) {
             book.setAvailable(false);
             bookRepository.save(book);

@@ -1,4 +1,4 @@
 public interface BookRepository {
     void save(Book book);
-    Book findByID(String isbn);
+    Book findByID(String id);
 }
