@@ -15,9 +15,13 @@ public class SystemConfig {
         this.maxOrdersPerDay = 100;
     }
 
-    public static synchronized SystemConfig getInstance() {
+    public static SystemConfig getInstance() {
         if (instance == null) {
-            instance = new SystemConfig();
+            synchronized (SystemConfig.class) {
+                if (instance == null) {
+                    instance = new SystemConfig();
+                }
+            }
         }
         return instance;
     }
@@ -26,32 +30,15 @@ public class SystemConfig {
         return deliveryFee;
     }
 
-    public void setDeliveryFee(double deliveryFee) {
-        this.deliveryFee = deliveryFee;
-    }
 
     public String getRestaurantStatus() {
         return restaurantStatus;
     }
 
-    public void setRestaurantStatus(String restaurantStatus) {
-        this.restaurantStatus = restaurantStatus;
-    }
 
     public String getRestaurantName() {
         return restaurantName;
     }
 
-    public int getMaxOrdersPerDay() {
-        return maxOrdersPerDay;
-    }
 
-    public void displayConfig() {
-        System.out.println("\n===== SYSTEM CONFIGURATION =====");
-        System.out.println("Restaurant: " + restaurantName);
-        System.out.println("Status: " + restaurantStatus);
-        System.out.println("Delivery Fee: $" + deliveryFee);
-        System.out.println("Max Orders/Day: " + maxOrdersPerDay);
-        System.out.println("=================================\n");
-    }
 }

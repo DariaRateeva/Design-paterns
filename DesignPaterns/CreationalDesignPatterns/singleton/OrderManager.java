@@ -18,9 +18,13 @@ public class OrderManager {
         this.nextOrderId = 1001;  // Start from order 1001
     }
 
-    public static synchronized OrderManager getInstance() {
+    public static OrderManager getInstance() {
         if (instance == null) {
-            instance = new OrderManager();
+            synchronized (OrderManager.class) {
+                if (instance == null) {
+                    instance = new OrderManager();
+                }
+            }
         }
         return instance;
     }
@@ -31,21 +35,6 @@ public class OrderManager {
         orders.add(order);
         System.out.println("Order #" + order.getId() + " placed successfully!");
         return order;
-    }
-
-    // Get all orders
-    public List<Order> getAllOrders() {
-        return new ArrayList<>(orders);
-    }
-
-    // Get order by ID
-    public Order getOrderById(int id) {
-        for (Order order : orders) {
-            if (order.getId() == id) {
-                return order;
-            }
-        }
-        return null;
     }
 
     // Get total number of orders
