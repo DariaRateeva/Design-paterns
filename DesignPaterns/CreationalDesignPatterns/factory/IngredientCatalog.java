@@ -76,4 +76,19 @@ public class IngredientCatalog {
         }
         System.out.println("─────────────────────────────────────────");
     }
+
+    // Add this single method to your existing IngredientCatalog.java
+    public static List<Ingredient> getIngredientsForType(String foodType) {
+        switch (foodType.toLowerCase()) {
+            case "pizza":
+                return getPizzaIngredients();
+            case "burger":
+                return getBurgerIngredients();
+            case "salad":
+                return getSaladIngredients();
+            default:
+                return new ArrayList<>();
+        }
+    }
+
 }
