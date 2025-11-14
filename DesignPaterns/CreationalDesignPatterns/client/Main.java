@@ -21,6 +21,7 @@ public class Main {
     private static List<Food> cart = new ArrayList<>();
     private static String customerName = "";
     private static String deliveryAddress = "";
+    private static DeliveryPlatform selectedPlatform = null;
 
     public static void main(String[] args) {
         displayWelcome();
@@ -31,19 +32,19 @@ public class Main {
 
             switch (choice) {
                 case 1:
-                    browseAndOrderFood();
+                    selectDeliveryPlatform();
                     break;
                 case 2:
-                    addEnhancements();
+                    browseAndOrderFood();
                     break;
                 case 3:
-                    reviewCart();
+                    addEnhancements();
                     break;
                 case 4:
-                    publishToDeliveryPlatforms();
+                    reviewCart();
                     break;
                 case 5:
-                    completeOrderWithPayment();
+                    completeOrder();
                     break;
                 case 6:
                     viewOrderHistory();
@@ -72,10 +73,17 @@ public class Main {
         System.out.println("\n" + "=".repeat(70));
         System.out.println("MAIN MENU");
         System.out.println("=".repeat(70));
-        System.out.println("1. Browse & Order Food");
-        System.out.println("2. Add Order Enhancements");
-        System.out.println("3. Review Cart");
-        System.out.println("4. Publish to Delivery Platforms");
+
+        if (selectedPlatform != null) {
+            System.out.println("Current Platform: " + selectedPlatform.getPlatformName());
+            System.out.println("-".repeat(70));
+        }
+
+        System.out.println("1. Select Delivery Platform" +
+                (selectedPlatform == null ? " (REQUIRED FIRST)" : ""));
+        System.out.println("2. Browse & Order Food");
+        System.out.println("3. Add Order Enhancements");
+        System.out.println("4. Review Cart");
         System.out.println("5. Complete Order & Payment");
         System.out.println("6. View Order History");
         System.out.println("7. Exit");
@@ -89,11 +97,90 @@ public class Main {
         }
     }
 
-    // ============= OPTION 1: BROWSE & ORDER =============
+    // ============= STEP 1: SELECT DELIVERY PLATFORM (ADAPTER PATTERN) =============
+
+    private static void selectDeliveryPlatform() {
+        System.out.println("\n" + "=".repeat(70));
+        System.out.println("SELECT DELIVERY PLATFORM");
+        System.out.println("=".repeat(70));
+
+        System.out.println("-".repeat(70));
+        System.out.println();
+        System.out.println("1. UberEats");
+        System.out.println();
+        System.out.println("2. DoorDash");
+        System.out.println();
+        System.out.println("3. Glovo");
+        System.out.println();
+        System.out.println("0. Cancel");
+
+        System.out.print("\nSelect platform: ");
+        int choice = 0;
+        try {
+            choice = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input!");
+            return;
+        }
+
+        DeliveryPlatform newPlatform = null;
+        switch (choice) {
+            case 1:
+                newPlatform = new UberEatsAdapter();
+                System.out.println("\nSelected: UberEats");
+                System.out.println("Using UberEatsAdapter to convert to JSON format");
+                break;
+            case 2:
+                newPlatform = new DoorDashAdapter();
+                System.out.println("\nSelected: DoorDash");
+                System.out.println("Using DoorDashAdapter to convert to XML format");
+                break;
+            case 3:
+                newPlatform = new GlovoAdapter();
+                System.out.println("\nSelected: Glovo");
+                System.out.println("Using GlovoAdapter to convert to HashMap format");
+                break;
+            case 0:
+                System.out.println("Cancelled.");
+                return;
+            default:
+                System.out.println("Invalid choice!");
+                return;
+        }
+
+        if (selectedPlatform != null && !cart.isEmpty()) {
+            System.out.println("\nWarning: Changing platform will clear your cart!");
+            System.out.print("Continue? (y/n): ");
+            if (!scanner.nextLine().trim().equalsIgnoreCase("y")) {
+                System.out.println("Platform change cancelled.");
+                return;
+            }
+            cart.clear();
+        }
+
+        selectedPlatform = newPlatform;
+
+        System.out.println("\n" + "=".repeat(70));
+        System.out.println("PLATFORM SELECTED: " + selectedPlatform.getPlatformName());
+        System.out.println("=".repeat(70));
+        System.out.println("The Adapter Pattern allows:");
+        System.out.println("  - Single DeliveryPlatform interface for all platforms");
+        System.out.println("  - Each adapter converts our Food objects to platform format");
+        System.out.println("  - At checkout, order will be sent in " +
+                selectedPlatform.getPlatformName() + " format");
+        System.out.println("=".repeat(70));
+    }
+
+    // ============= STEP 2: BROWSE & ORDER FOOD =============
 
     private static void browseAndOrderFood() {
+        if (selectedPlatform == null) {
+            System.out.println("\nPlease select a delivery platform first (Option 1)!");
+            return;
+        }
+
         System.out.println("\n" + "=".repeat(70));
-        System.out.println("MENU - SELECT YOUR FOOD");
+        System.out.println("MENU - " + selectedPlatform.getPlatformName().toUpperCase());
         System.out.println("=".repeat(70));
 
         FoodFactoryProvider.displayMenu();
@@ -126,6 +213,7 @@ public class Main {
         cart.add(food);
         System.out.println("\n" + food.getName() + " added to cart!");
         System.out.println("Current cart total: $" + String.format("%.2f", calculateCartTotal()));
+        System.out.println("Platform: " + selectedPlatform.getPlatformName());
 
         System.out.print("\nAdd another item? (y/n): ");
         if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
@@ -175,30 +263,36 @@ public class Main {
         return food;
     }
 
-    // ============= OPTION 2: ADD ENHANCEMENTS (DECORATOR PATTERN) =============
+    // ============= STEP 3: ADD ENHANCEMENTS (DECORATOR PATTERN) =============
 
     private static void addEnhancements() {
+        if (selectedPlatform == null) {
+            System.out.println("\nPlease select a delivery platform first (Option 1)!");
+            return;
+        }
+
         if (cart.isEmpty()) {
-            System.out.println("\nYour cart is empty! Please add items first.");
+            System.out.println("\nYour cart is empty! Please add items first (Option 2).");
             return;
         }
 
         System.out.println("\n" + "=".repeat(70));
         System.out.println("ADD ORDER ENHANCEMENTS");
         System.out.println("=".repeat(70));
+        System.out.println("Platform: " + selectedPlatform.getPlatformName());
 
         System.out.println("\nYour Current Order:");
         displayCartItems();
         double currentTotal = calculateCartTotal();
         System.out.println("\nCurrent Total: $" + String.format("%.2f", currentTotal));
 
-        System.out.println("\nAvailable Enhancements:");
+        System.out.println("\nDECORATOR PATTERN - Add Features Dynamically");
         System.out.println("-".repeat(70));
-        System.out.println("1. Express Delivery (Priority + Faster)");
-        System.out.println("2. Apply Discount Coupon");
+        System.out.println("1. Express Delivery (+$5.00 per item)");
+        System.out.println("2. Apply Discount Coupon (10-50% OFF)");
         System.out.println("3. Earn Loyalty Points");
-        System.out.println("4. Add Special Occasion Message");
-        System.out.println("5. Apply All Available Enhancements");
+        System.out.println("4. Add Special Occasion Message (+$1.50)");
+        System.out.println("5. Apply All Enhancements");
         System.out.println("0. Back to Main Menu");
 
         System.out.print("\nSelect enhancement: ");
@@ -243,6 +337,7 @@ public class Main {
                 System.out.println("Additional Cost: $" + String.format("%.2f", newTotal - currentTotal));
             }
             System.out.println("-".repeat(70));
+            System.out.println("Decorator Pattern: Features added without modifying Food class");
         }
     }
 
@@ -258,7 +353,7 @@ public class Main {
             for (int i = 0; i < cart.size(); i++) {
                 cart.set(i, new ExpressDeliveryDecorator(cart.get(i)));
             }
-            System.out.println("Express Delivery added to entire order!");
+            System.out.println("Express Delivery decorator applied to all items!");
         } else {
             System.out.println("Cancelled.");
         }
@@ -311,7 +406,7 @@ public class Main {
 
         double newTotal = calculateCartTotal();
 
-        System.out.println("\n" + discountPercent + "% Discount applied to entire order!");
+        System.out.println("\nDiscount decorator applied: " + discountPercent + "% OFF");
         System.out.println("Original: $" + String.format("%.2f", originalTotal));
         System.out.println("After Discount: $" + String.format("%.2f", newTotal));
         System.out.println("Saved: $" + String.format("%.2f", originalTotal - newTotal));
@@ -332,8 +427,8 @@ public class Main {
                 cart.set(i, decorated);
                 totalPoints += (int)(item.getPrice() * 10);
             }
-            System.out.println("Loyalty points activated!");
-            System.out.println("You will earn approximately " + totalPoints + " points with this order!");
+            System.out.println("Loyalty Points decorator applied!");
+            System.out.println("You will earn approximately " + totalPoints + " points!");
         } else {
             System.out.println("Cancelled.");
         }
@@ -342,8 +437,7 @@ public class Main {
     private static void applySpecialMessageToOrder() {
         System.out.println("\nSPECIAL OCCASION MESSAGE");
         System.out.println("-".repeat(70));
-        System.out.println("Add a personalized message card to your order");
-        System.out.println("Perfect for: Birthdays, Anniversaries, Thank You, etc.");
+        System.out.println("Add a personalized message card");
         System.out.println("Cost: +$1.50");
 
         System.out.print("\nEnter your message: ");
@@ -356,7 +450,7 @@ public class Main {
 
         cart.set(0, new SpecialOccasionDecorator(cart.get(0), message));
 
-        System.out.println("Special message added to order!");
+        System.out.println("Special Occasion decorator applied!");
         System.out.println("Message: \"" + message + "\"");
     }
 
@@ -365,9 +459,8 @@ public class Main {
         System.out.println("-".repeat(70));
         System.out.println("This will add:");
         System.out.println("  Express Delivery");
-        System.out.println("  20% Discount (standard combo)");
+        System.out.println("  20% Discount");
         System.out.println("  Loyalty Points");
-        System.out.println("  Special Message (optional)");
 
         System.out.print("\nApply all? (y/n): ");
         if (!scanner.nextLine().trim().equalsIgnoreCase("y")) {
@@ -385,37 +478,33 @@ public class Main {
             cart.set(i, item);
         }
 
-        System.out.print("\nAdd special message? (y/n): ");
-        if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
-            System.out.print("Enter message: ");
-            String message = scanner.nextLine().trim();
-            if (!message.isEmpty()) {
-                cart.set(0, new SpecialOccasionDecorator(cart.get(0), message));
-            }
-        }
-
         double newTotal = calculateCartTotal();
         int totalPoints = (int)(originalTotal * 10 * 0.8);
 
         System.out.println("\n" + "=".repeat(70));
-        System.out.println("ALL ENHANCEMENTS APPLIED!");
+        System.out.println("ALL DECORATORS APPLIED!");
         System.out.println("=".repeat(70));
         System.out.println("Original Total: $" + String.format("%.2f", originalTotal));
         System.out.println("Final Total: $" + String.format("%.2f", newTotal));
-        System.out.println("Points to Earn: ~" + totalPoints + " points");
+        System.out.println("Points to Earn: ~" + totalPoints);
         System.out.println("=".repeat(70));
     }
 
-    // ============= OPTION 3: REVIEW CART =============
+    // ============= STEP 4: REVIEW CART =============
 
     private static void reviewCart() {
+        if (selectedPlatform == null) {
+            System.out.println("\nPlease select a delivery platform first (Option 1)!");
+            return;
+        }
+
         if (cart.isEmpty()) {
             System.out.println("\nYour cart is empty!");
             return;
         }
 
         System.out.println("\n" + "=".repeat(70));
-        System.out.println("YOUR SHOPPING CART");
+        System.out.println("YOUR SHOPPING CART - " + selectedPlatform.getPlatformName());
         System.out.println("=".repeat(70));
 
         for (int i = 0; i < cart.size(); i++) {
@@ -444,119 +533,21 @@ public class Main {
         }
     }
 
-    // ============= OPTION 4: PUBLISH TO DELIVERY PLATFORMS (ADAPTER PATTERN) =============
+    // ============= STEP 5: COMPLETE ORDER (FACADE PATTERN + ADAPTER OUTPUT) =============
 
-    private static void publishToDeliveryPlatforms() {
+    private static void completeOrder() {
+        if (selectedPlatform == null) {
+            System.out.println("\nPlease select a delivery platform first (Option 1)!");
+            return;
+        }
+
         if (cart.isEmpty()) {
-            System.out.println("\nYour cart is empty! Add items first.");
+            System.out.println("\nYour cart is empty! Add items first (Option 2).");
             return;
         }
 
         System.out.println("\n" + "=".repeat(70));
-        System.out.println("PUBLISH TO DELIVERY PLATFORMS");
-        System.out.println("=".repeat(70));
-
-        System.out.println("\nADAPTER PATTERN - Integrating Different Platform APIs");
-        System.out.println("-".repeat(70));
-        System.out.println("Your restaurant lists menu items on multiple platforms.");
-        System.out.println("Each platform has DIFFERENT, INCOMPATIBLE APIs:");
-        System.out.println();
-        System.out.println("1. UberEats");
-        System.out.println("   API: addMenuItem(String jsonData)");
-        System.out.println("   Format: JSON with specific fields");
-        System.out.println("   Price: Must be in cents");
-        System.out.println();
-        System.out.println("2. DoorDash");
-        System.out.println("   API: publishItem(String xmlData)");
-        System.out.println("   Format: XML structure");
-        System.out.println("   Requires: Store code");
-        System.out.println();
-        System.out.println("3. Glovo");
-        System.out.println("   API: syncMenuItem(Map data, String apiKey)");
-        System.out.println("   Format: HashMap with custom keys");
-        System.out.println("   Requires: API authentication");
-        System.out.println();
-        System.out.println("4. Publish to ALL Platforms");
-        System.out.println("0. Cancel");
-
-        System.out.print("\nSelect platform: ");
-        int choice = 0;
-        try {
-            choice = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid input!");
-            return;
-        }
-
-        DeliveryPlatform[] platforms;
-
-        switch (choice) {
-            case 1:
-                platforms = new DeliveryPlatform[]{new UberEatsAdapter()};
-                break;
-            case 2:
-                platforms = new DeliveryPlatform[]{new DoorDashAdapter()};
-                break;
-            case 3:
-                platforms = new DeliveryPlatform[]{new GlovoAdapter()};
-                break;
-            case 4:
-                platforms = new DeliveryPlatform[]{
-                        new UberEatsAdapter(),
-                        new DoorDashAdapter(),
-                        new GlovoAdapter()
-                };
-                break;
-            case 0:
-                System.out.println("Cancelled.");
-                return;
-            default:
-                System.out.println("Invalid choice!");
-                return;
-        }
-
-        System.out.println("\n" + "=".repeat(70));
-        System.out.println("PUBLISHING MENU ITEMS");
-        System.out.println("=".repeat(70));
-
-        for (Food food : cart) {
-            System.out.println("\nPublishing: " + food.getName() + " ($" +
-                    String.format("%.2f", food.getPrice()) + ")");
-            System.out.println("-".repeat(70));
-
-            for (DeliveryPlatform platform : platforms) {
-                System.out.println(platform.getPlatformName() + " Adapter:");
-                boolean success = platform.publishMenuItem(food);
-
-                if (success) {
-                    System.out.println("   Published to " + platform.getPlatformName());
-                } else {
-                    System.out.println("   Failed to publish to " + platform.getPlatformName());
-                }
-                System.out.println();
-            }
-        }
-
-        System.out.println("=".repeat(70));
-        System.out.println("PUBLISHING COMPLETE!");
-        System.out.println("=".repeat(70));
-        System.out.println("The Adapter Pattern allowed us to:");
-        System.out.println("   - Use ONE unified interface: DeliveryPlatform");
-        System.out.println("   - Support THREE different APIs (JSON, XML, Map)");
-        System.out.println("   - Add new platforms WITHOUT changing Food class");
-        System.out.println("=".repeat(70));
-    }
-
-    // ============= OPTION 5: COMPLETE ORDER WITH PAYMENT (FACADE PATTERN) =============
-
-    private static void completeOrderWithPayment() {
-        if (cart.isEmpty()) {
-            System.out.println("\nYour cart is empty! Add items first.");
-            return;
-        }
-
-        System.out.println("\n" + "=".repeat(70));
-        System.out.println("ORDER COMPLETION & PAYMENT");
+        System.out.println("ORDER COMPLETION - " + selectedPlatform.getPlatformName());
         System.out.println("=".repeat(70));
 
         if (customerName.isEmpty()) {
@@ -610,18 +601,20 @@ public class Main {
         boolean isExpress = scanner.nextLine().equalsIgnoreCase("y");
 
         System.out.println("\n" + "=".repeat(70));
-        System.out.println("FACADE PATTERN - Coordinating Subsystems");
+        System.out.println("FACADE PATTERN - Coordinating Order Processing");
         System.out.println("=".repeat(70));
-        System.out.println("Orchestrating:");
-        System.out.println("  1. InventoryService");
-        System.out.println("  2. PaymentService");
-        System.out.println("  3. DeliveryService");
-        System.out.println("  4. NotificationService");
+        System.out.println("The Facade coordinates multiple subsystems:");
+        System.out.println("  1. InventoryService - Check stock availability");
+        System.out.println("  2. PaymentService - Process payment");
+        System.out.println("  3. DeliveryService - Schedule delivery");
+        System.out.println("  4. NotificationService - Send confirmations");
         System.out.println("=".repeat(70));
 
-        System.out.println("\nProcessing through Facade...\n");
+        System.out.println("\nProcessing order through OrderFacade...\n");
 
         boolean success = true;
+        String lastOrderId = "";
+
         for (Food food : cart) {
             boolean orderPlaced = orderFacade.placeCompleteOrder(
                     customerName,
@@ -631,7 +624,9 @@ public class Main {
                     isExpress
             );
 
-            if (!orderPlaced) {
+            if (orderPlaced) {
+                lastOrderId = "ORD" + orderManager.getTotalOrders();
+            } else {
                 success = false;
                 break;
             }
@@ -641,20 +636,46 @@ public class Main {
             System.out.println("\n" + "=".repeat(70));
             System.out.println("ORDER COMPLETED SUCCESSFULLY!");
             System.out.println("=".repeat(70));
-            System.out.println("Confirmation: " + customerName);
-            System.out.println("Delivery: " + (isExpress ? "30 min" : "60 min"));
+
+            double totalAmount = calculateCartTotal() + config.getDeliveryFee();
+
+            System.out.println("\nADAPTER PATTERN - Platform-Specific Order Confirmation");
+            System.out.println("-".repeat(70));
+            System.out.println("Sending order to " + selectedPlatform.getPlatformName() +
+                    " in their format:\n");
+
+            for (Food food : cart) {
+                selectedPlatform.publishMenuItem(food);
+            }
+
+            System.out.println();
+            selectedPlatform.acceptOrder(lastOrderId, totalAmount);
+
+            System.out.println("\n" + "=".repeat(70));
+            System.out.println("ORDER SUMMARY");
+            System.out.println("=".repeat(70));
+            System.out.println("Order ID: " + lastOrderId);
+            System.out.println("Customer: " + customerName);
+            System.out.println("Platform: " + selectedPlatform.getPlatformName());
+            System.out.println("Delivery: " + (isExpress ? "30 minutes" : "60 minutes"));
             System.out.println("Address: " + deliveryAddress);
-            System.out.println("\nFacade coordinated all subsystems in one call!");
+            System.out.println("Total: $" + String.format("%.2f", totalAmount));
+            System.out.println("=".repeat(70));
+            System.out.println("\nPATTERNS DEMONSTRATED:");
+            System.out.println("  - DECORATOR: Order enhancements applied to food items");
+            System.out.println("  - ADAPTER: Order sent in " + selectedPlatform.getPlatformName() +
+                    " format");
+            System.out.println("  - FACADE: Multiple subsystems coordinated seamlessly");
             System.out.println("=".repeat(70));
 
             cart.clear();
             deliveryAddress = "";
         } else {
-            System.out.println("\nOrder failed. Please try again.");
+            System.out.println("\nOrder processing failed. Please try again.");
         }
     }
 
-    // ============= OPTION 6: ORDER HISTORY =============
+    // ============= STEP 6: ORDER HISTORY =============
 
     private static void viewOrderHistory() {
         System.out.println("\n" + "=".repeat(70));
