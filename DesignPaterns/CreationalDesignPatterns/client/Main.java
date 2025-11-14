@@ -107,11 +107,8 @@ public class Main {
         System.out.println("-".repeat(70));
         System.out.println();
         System.out.println("1. UberEats");
-        System.out.println();
         System.out.println("2. DoorDash");
-        System.out.println();
         System.out.println("3. Glovo");
-        System.out.println();
         System.out.println("0. Cancel");
 
         System.out.print("\nSelect platform: ");
@@ -162,12 +159,6 @@ public class Main {
 
         System.out.println("\n" + "=".repeat(70));
         System.out.println("PLATFORM SELECTED: " + selectedPlatform.getPlatformName());
-        System.out.println("=".repeat(70));
-        System.out.println("The Adapter Pattern allows:");
-        System.out.println("  - Single DeliveryPlatform interface for all platforms");
-        System.out.println("  - Each adapter converts our Food objects to platform format");
-        System.out.println("  - At checkout, order will be sent in " +
-                selectedPlatform.getPlatformName() + " format");
         System.out.println("=".repeat(70));
     }
 
@@ -336,8 +327,7 @@ public class Main {
             } else {
                 System.out.println("Additional Cost: $" + String.format("%.2f", newTotal - currentTotal));
             }
-            System.out.println("-".repeat(70));
-            System.out.println("Decorator Pattern: Features added without modifying Food class");
+
         }
     }
 
@@ -603,12 +593,6 @@ public class Main {
         System.out.println("\n" + "=".repeat(70));
         System.out.println("FACADE PATTERN - Coordinating Order Processing");
         System.out.println("=".repeat(70));
-        System.out.println("The Facade coordinates multiple subsystems:");
-        System.out.println("  1. InventoryService - Check stock availability");
-        System.out.println("  2. PaymentService - Process payment");
-        System.out.println("  3. DeliveryService - Schedule delivery");
-        System.out.println("  4. NotificationService - Send confirmations");
-        System.out.println("=".repeat(70));
 
         System.out.println("\nProcessing order through OrderFacade...\n");
 
@@ -661,12 +645,6 @@ public class Main {
             System.out.println("Address: " + deliveryAddress);
             System.out.println("Total: $" + String.format("%.2f", totalAmount));
             System.out.println("=".repeat(70));
-            System.out.println("\nPATTERNS DEMONSTRATED:");
-            System.out.println("  - DECORATOR: Order enhancements applied to food items");
-            System.out.println("  - ADAPTER: Order sent in " + selectedPlatform.getPlatformName() +
-                    " format");
-            System.out.println("  - FACADE: Multiple subsystems coordinated seamlessly");
-            System.out.println("=".repeat(70));
 
             cart.clear();
             deliveryAddress = "";
@@ -701,7 +679,6 @@ public class Main {
     private static void displayGoodbye() {
         System.out.println("\n" + "=".repeat(70));
         System.out.println("Thank you for visiting " + config.getRestaurantName() + "!");
-        System.out.println("We hope to serve you again soon!");
         System.out.println("Total orders today: " + orderManager.getTotalOrders());
         System.out.println("=".repeat(70));
     }
