@@ -1,9 +1,11 @@
 package models;
 
+import composite.MenuComponent;
+
 import java.util.ArrayList;
 import java.util.List;
 
-public class Burger implements Food {
+public class Burger implements Food, MenuComponent {
     private String name = "Custom Burger";
     private double basePrice = 4.99;
     private List<Ingredient> ingredients;
@@ -51,6 +53,20 @@ public class Burger implements Food {
     public List<Ingredient> getIngredients() {
         return ingredients;
     }
+
+    @Override
+    public void display(int level) {
+        String indent = "  ".repeat(level);
+        System.out.printf("%s└─ burger %s - $%.2f%n", indent, name, getPrice());
+
+        if (!ingredients.isEmpty()) {
+            for (Ingredient ing : ingredients) {
+                System.out.printf("%s   ├─ %s (+$%.2f)%n",
+                        indent, ing.getName(), ing.getPrice());
+            }
+        }
+    }
+
 
     public String getDetailedDescription() {
         StringBuilder sb = new StringBuilder();
