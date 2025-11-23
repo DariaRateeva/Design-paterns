@@ -7,12 +7,15 @@ import singleton.*;
 import decorator.*;
 import adapter.*;
 import composite.*;
+import strategy.*;      // NEW: Strategy Pattern imports
+import observer.*;      // NEW: Observer Pattern imports
 
 import java.util.Scanner;
 import java.util.List;
 import java.util.ArrayList;
 
 public class Main {
+
     private static Scanner scanner = new Scanner(System.in);
     private static SystemConfig config = SystemConfig.getInstance();
     private static Order currentOrder;
@@ -20,14 +23,17 @@ public class Main {
     private static String deliveryAddress = "";
     private static DeliveryPlatform selectedPlatform = null;
     private static int orderIdCounter = 1001;
-    private static double appliedDiscountPercent = 0;
+
+    // STRATEGY PATTERN: Replace double with DiscountStrategy
+    private static DiscountStrategy discountStrategy = new NoDiscount();
+
     private static List<String> specialRequests = new ArrayList<>();
 
     public static void main(String[] args) {
         displayWelcome();
         currentOrder = new Order(orderIdCounter++, "Guest");
-
         boolean running = true;
+
         while (running) {
             int choice = displayMainMenu();
             switch (choice) {
@@ -64,15 +70,17 @@ public class Main {
             System.out.println("Ordering via: " + selectedPlatform.getPlatformName());
             System.out.println("-".repeat(70));
         }
+
         System.out.println("1. Select Delivery Platform" + (selectedPlatform == null ? " (REQUIRED FIRST)" : ""));
         System.out.println("2. Browse Menu & Order Food");
         System.out.println("3. Build Your Own Combo Meal");
-        System.out.println("4. Apply Discounts & Special Requests (DECORATOR PATTERN)");
+        System.out.println("4. Apply Discounts & Special Requests (STRATEGY + DECORATOR)");
         System.out.println("5. Review Your Order (COMPOSITE PATTERN)");
-        System.out.println("6. Checkout & Pay");
+        System.out.println("6. Checkout & Pay (OBSERVER PATTERN)");
         System.out.println("7. Exit");
         System.out.println("=".repeat(70));
         System.out.print("\nYour choice: ");
+
         try {
             return Integer.parseInt(scanner.nextLine());
         } catch (NumberFormatException e) {
@@ -126,7 +134,7 @@ public class Main {
                 return;
             }
             currentOrder = new Order(orderIdCounter++, customerName.isEmpty() ? "Guest" : customerName);
-            appliedDiscountPercent = 0;
+            discountStrategy = new NoDiscount();
             specialRequests.clear();
         }
 
@@ -329,14 +337,17 @@ public class Main {
         }
 
         System.out.println("\n" + "=".repeat(70));
-        System.out.println("DECORATOR PATTERN - Apply Discounts & Special Requests");
+        System.out.println("STRATEGY + DECORATOR PATTERNS - Discounts & Special Requests");
         System.out.println("=".repeat(70));
         System.out.printf("Current Order Total: $%.2f%n", currentOrder.getPrice());
-        if (appliedDiscountPercent > 0) {
-            System.out.printf("Current Discount: %.0f%% OFF%n", appliedDiscountPercent);
+
+        double currentDiscount = discountStrategy.calculateDiscount(currentOrder.getPrice());
+        if (currentDiscount > 0) {
+            System.out.printf("Current Discount: %s (saves $%.2f)%n",
+                    discountStrategy.getDescription(), currentDiscount);
         }
 
-        System.out.println("\n1. Apply Discount Coupon (10-50% OFF)");
+        System.out.println("\n1. Apply Discount Strategy (STRATEGY PATTERN)");
         System.out.println("2. Express Delivery (+$5.00)");
         System.out.println("3. Add Special Cooking Instructions");
         System.out.println("4. Include Gift Message (+$1.50)");
@@ -353,42 +364,94 @@ public class Main {
 
         switch (choice) {
             case 1:
-                System.out.print("\nEnter discount percentage (10-50): ");
+                // STRATEGY PATTERN IMPLEMENTATION
+                System.out.println("\n--- STRATEGY PATTERN: Select Discount Type ---");
+                System.out.println("1. Percentage Discount (e.g., 10% OFF)");
+                System.out.println("2. Fixed Amount Discount (e.g., $5 OFF)");
+                System.out.println("3. Bulk Order Discount (15% OFF orders above $50)");
+                System.out.println("4. First-Time Customer Discount ($10 OFF)");
+                System.out.print("Choose discount type: ");
+
                 try {
-                    int discount = Integer.parseInt(scanner.nextLine());
-                    if (discount >= 10 && discount <= 50) {
-                        appliedDiscountPercent = discount;
-                        double savings = currentOrder.getPrice() * (discount / 100.0);
-                        System.out.printf("\n" + discount + "%% discount applied!");
-                        System.out.printf("\nYou save: $%.2f%n", savings);
-                        System.out.printf("New total: $%.2f%n",
-                                currentOrder.getPrice() * (1 - discount/100.0));
-                    } else {
-                        System.out.println("\nDiscount must be between 10% and 50%");
+                    int discountType = Integer.parseInt(scanner.nextLine());
+
+                    switch (discountType) {
+                        case 1:
+                            System.out.print("Enter discount percentage (10-50): ");
+                            int percent = Integer.parseInt(scanner.nextLine());
+                            if (percent >= 10 && percent <= 50) {
+                                discountStrategy = new PercentageDiscount(percent);
+                                double savings = discountStrategy.calculateDiscount(currentOrder.getPrice());
+                                System.out.printf("✓ %s applied! You save $%.2f\n",
+                                        discountStrategy.getDescription(), savings);
+                            } else {
+                                System.out.println("Percentage must be between 10 and 50!");
+                            }
+                            break;
+
+                        case 2:
+                            System.out.print("Enter fixed discount amount ($5-$20): ");
+                            double amount = Double.parseDouble(scanner.nextLine());
+                            if (amount >= 5 && amount <= 20) {
+                                discountStrategy = new FixedAmountDiscount(amount);
+                                double savings = discountStrategy.calculateDiscount(currentOrder.getPrice());
+                                System.out.printf("✓ %s applied! You save $%.2f\n",
+                                        discountStrategy.getDescription(), savings);
+                            } else {
+                                System.out.println("Amount must be between $5 and $20!");
+                            }
+                            break;
+
+                        case 3:
+                            discountStrategy = new BulkOrderDiscount(50.0, 15.0);
+                            double savings = discountStrategy.calculateDiscount(currentOrder.getPrice());
+                            if (savings > 0) {
+                                System.out.printf("✓ %s applied! You save $%.2f\n",
+                                        discountStrategy.getDescription(), savings);
+                            } else {
+                                System.out.println("⚠️  Bulk discount requires order total above $50.00");
+                                System.out.printf("Current total: $%.2f\n", currentOrder.getPrice());
+                                discountStrategy = new NoDiscount();
+                            }
+                            break;
+
+                        case 4:
+                            discountStrategy = new FirstTimeCustomerDiscount(10.0, 10.0);
+                            double firstTimeSavings = discountStrategy.calculateDiscount(currentOrder.getPrice());
+                            System.out.printf("✓ %s applied! You save $%.2f\n",
+                                    discountStrategy.getDescription(), firstTimeSavings);
+                            break;
+
+                        default:
+                            System.out.println("Invalid discount type!");
                     }
                 } catch (NumberFormatException e) {
-                    System.out.println("\nInvalid discount!");
+                    System.out.println("Invalid input!");
                 }
                 break;
+
             case 2:
                 specialRequests.add("EXPRESS_DELIVERY");
                 System.out.println("\nExpress delivery added! (+$5.00)");
                 System.out.println("Your order will arrive in 30 minutes or less.");
                 break;
+
             case 3:
                 System.out.print("\nSpecial instructions (e.g., 'no onions', 'extra sauce'): ");
                 String instructions = scanner.nextLine();
                 specialRequests.add("INSTRUCTIONS: " + instructions);
                 System.out.println("Your instructions: \"" + instructions + "\"");
                 break;
+
             case 4:
                 System.out.print("\nGift message: ");
                 String message = scanner.nextLine();
                 specialRequests.add("GIFT_MESSAGE: " + message);
                 System.out.println("Gift message added: \"" + message + "\" (+$1.50)");
                 break;
+
             case 5:
-                int points = (int)(currentOrder.getPrice() * 10);
+                int points = (int) (currentOrder.getPrice() * 10);
                 System.out.printf("\nYou'll earn approximately %d loyalty points with this order!%n", points);
                 System.out.println("(10 points per dollar spent)");
                 break;
@@ -410,15 +473,16 @@ public class Main {
         System.out.println("\n" + "=".repeat(70));
         System.out.println("YOUR ORDER (COMPOSITE PATTERN - Hierarchical Display)");
         System.out.println("=".repeat(70));
-
         currentOrder.display(0);
 
+        // STRATEGY PATTERN: Calculate discount using strategy
         double subtotal = currentOrder.getPrice();
-        double discount = subtotal * (appliedDiscountPercent / 100.0);
+        double discount = discountStrategy.calculateDiscount(subtotal);
         double subtotalAfterDiscount = subtotal - discount;
 
         double expressDeliveryFee = 0;
         double giftMessageFee = 0;
+
         for (String request : specialRequests) {
             if (request.equals("EXPRESS_DELIVERY")) {
                 expressDeliveryFee = 5.00;
@@ -432,20 +496,22 @@ public class Main {
         double grandTotal = subtotalAfterDiscount + deliveryFee + giftMessageFee;
 
         System.out.println("\n" + "-".repeat(70));
-        System.out.printf("Subtotal: $%.2f%n", subtotal);
+        System.out.printf("Subtotal:                    $%.2f%n", subtotal);
 
-        if (appliedDiscountPercent > 0) {
-            System.out.printf("Discount (%.0f%% OFF): -$%.2f%n", appliedDiscountPercent, discount);
-            System.out.printf("Subtotal after discount: $%.2f%n", subtotalAfterDiscount);
+        if (discount > 0) {
+            System.out.printf("Discount (%s):         -$%.2f%n",
+                    discountStrategy.getDescription(), discount);
+            System.out.printf("Subtotal after discount:     $%.2f%n", subtotalAfterDiscount);
         }
 
         if (expressDeliveryFee > 0) {
-            System.out.printf("Express Delivery Fee: $%.2f%n", expressDeliveryFee);
+            System.out.printf("Express Delivery Fee:        $%.2f%n", expressDeliveryFee);
         }
-        System.out.printf("Standard Delivery Fee: $%.2f%n", config.getDeliveryFee());
+
+        System.out.printf("Standard Delivery Fee:       $%.2f%n", config.getDeliveryFee());
 
         if (giftMessageFee > 0) {
-            System.out.printf("Gift Message: $%.2f%n", giftMessageFee);
+            System.out.printf("Gift Message:                $%.2f%n", giftMessageFee);
         }
 
         if (!specialRequests.isEmpty()) {
@@ -520,12 +586,14 @@ public class Main {
                 return;
         }
 
+        // STRATEGY PATTERN: Calculate final totals using discount strategy
         double subtotal = currentOrder.getPrice();
-        double discount = subtotal * (appliedDiscountPercent / 100.0);
+        double discount = discountStrategy.calculateDiscount(subtotal);
         double subtotalAfterDiscount = subtotal - discount;
 
         double expressDeliveryFee = 0;
         double giftMessageFee = 0;
+
         for (String request : specialRequests) {
             if (request.equals("EXPRESS_DELIVERY")) expressDeliveryFee = 5.00;
             if (request.startsWith("GIFT_MESSAGE:")) giftMessageFee = 1.50;
@@ -538,7 +606,7 @@ public class Main {
 
         for (MenuComponent item : currentOrder.getItems()) {
             if (item instanceof Food) {
-                selectedPlatform.publishMenuItem((Food)item);
+                selectedPlatform.publishMenuItem((Food) item);
             }
         }
 
@@ -551,23 +619,67 @@ public class Main {
             System.out.println("\n" + "=".repeat(70));
             System.out.println("ORDER CONFIRMED!");
             System.out.println("=".repeat(70));
+
+            // ==========================================
+            // OBSERVER PATTERN - Create Subject and Attach Observers
+            // ==========================================
+            System.out.println("\n🔔 Initializing Order Notification System (OBSERVER PATTERN)...");
+
+            OrderSubject orderSubject = new OrderSubject(orderId, customerName, total);
+
+            // Attach observers (different stakeholders)
+            orderSubject.attach(new CustomerNotifier(customerName + "@email.com"));
+            orderSubject.attach(new RestaurantNotifier(config.getRestaurantName()));
+            orderSubject.attach(new DeliveryDriverNotifier("Driver-" + (int) (Math.random() * 100)));
+
+            System.out.println("\n📋 Order Summary:");
             System.out.println("Order ID: " + orderId);
             System.out.println("Customer: " + customerName);
             System.out.println("Delivering to: " + deliveryAddress);
             System.out.println("Via: " + selectedPlatform.getPlatformName());
             System.out.printf("Amount Paid: $%.2f%n", total);
-            if (appliedDiscountPercent > 0) {
-                System.out.printf("You saved: $%.2f with your discount!%n", discount);
-            }
-            System.out.println("\nEstimated delivery: " + (expressDeliveryFee > 0 ? "30" : "45-60") + " minutes");
-            System.out.println("Confirmation sent to your email");
-            System.out.println("=".repeat(70));
-            System.out.println("\nThank you for your order!");
 
+            if (discount > 0) {
+                System.out.printf("You saved $%.2f with %s!%n", discount, discountStrategy.getDescription());
+            }
+
+            // Simulate order lifecycle - notify observers at each stage
+            System.out.println("\n" + "=".repeat(70));
+            System.out.println("SIMULATING ORDER LIFECYCLE (OBSERVER PATTERN IN ACTION)");
+            System.out.println("=".repeat(70));
+
+            try {
+                // Status change 1: CONFIRMED
+                orderSubject.setStatus(OrderStatus.CONFIRMED);
+                Thread.sleep(1500);
+
+                // Status change 2: PREPARING
+                orderSubject.setStatus(OrderStatus.PREPARING);
+                Thread.sleep(1500);
+
+                // Status change 3: OUT_FOR_DELIVERY
+                orderSubject.setStatus(OrderStatus.OUT_FOR_DELIVERY);
+                Thread.sleep(1500);
+
+                // Status change 4: DELIVERED
+                orderSubject.setStatus(OrderStatus.DELIVERED);
+
+            } catch (InterruptedException e) {
+                System.out.println("Order tracking interrupted.");
+            }
+
+            System.out.println("\n" + "=".repeat(70));
+            System.out.println("Estimated delivery: " + (expressDeliveryFee > 0 ? "30" : "45-60") + " minutes");
+            System.out.println("Confirmation sent to your email.");
+            System.out.println("Thank you for your order!");
+            System.out.println("=".repeat(70));
+
+            // Reset for next order
             currentOrder = new Order(orderIdCounter++, customerName);
             deliveryAddress = "";
-            appliedDiscountPercent = 0;
+            discountStrategy = new NoDiscount();
             specialRequests.clear();
+
         } else {
             System.out.println("\nPayment failed! Please try again.");
         }
@@ -586,6 +698,7 @@ public class Main {
         System.out.println("\n" + "-".repeat(70));
         System.out.println("CUSTOMIZE YOUR " + foodType.toUpperCase());
         IngredientCatalog.displayIngredients(foodType);
+
         List<Ingredient> availableIngredients = IngredientCatalog.getIngredientsForType(foodType);
 
         System.out.print("\nSelect extras (comma-separated, e.g., 1,3,5) or press Enter to skip: ");
@@ -594,6 +707,7 @@ public class Main {
         if (!input.isEmpty()) {
             FoodBuilder builder = new FoodBuilder(food);
             String[] selections = input.split(",");
+
             for (String sel : selections) {
                 try {
                     int index = Integer.parseInt(sel.trim()) - 1;
