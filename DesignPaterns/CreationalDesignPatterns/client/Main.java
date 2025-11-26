@@ -7,8 +7,9 @@ import singleton.*;
 import decorator.*;
 import adapter.*;
 import composite.*;
-import strategy.*;      // NEW: Strategy Pattern imports
-import observer.*;      // NEW: Observer Pattern imports
+import strategy.*;
+import observer.*;
+import chain.*;         // NEW: Chain of Responsibility imports
 
 import java.util.Scanner;
 import java.util.List;
@@ -76,7 +77,7 @@ public class Main {
         System.out.println("3. Build Your Own Combo Meal");
         System.out.println("4. Apply Discounts & Special Requests (STRATEGY + DECORATOR)");
         System.out.println("5. Review Your Order (COMPOSITE PATTERN)");
-        System.out.println("6. Checkout & Pay (OBSERVER PATTERN)");
+        System.out.println("6. Checkout & Pay (CHAIN OF RESPONSIBILITY + OBSERVER)");
         System.out.println("7. Exit");
         System.out.println("=".repeat(70));
         System.out.print("\nYour choice: ");
@@ -544,7 +545,7 @@ public class Main {
         }
 
         System.out.println("\n" + "=".repeat(70));
-        System.out.println("CHECKOUT");
+        System.out.println("CHECKOUT (CHAIN OF RESPONSIBILITY VALIDATION)");
         System.out.println("=".repeat(70));
 
         if (customerName.isEmpty()) {
@@ -556,10 +557,22 @@ public class Main {
         if (deliveryAddress.isEmpty()) {
             System.out.print("Delivery address: ");
             deliveryAddress = scanner.nextLine().trim();
-            if (deliveryAddress.isEmpty()) {
-                System.out.println("Address is required!");
-                return;
-            }
+        }
+
+        // ==========================================
+        // CHAIN OF RESPONSIBILITY PATTERN - Validate Order
+        // ==========================================
+        OrderValidationHandler validationChain = new RestaurantStatusHandler();
+        validationChain
+                .linkWith(new MinimumOrderHandler())
+                .linkWith(new DeliveryAddressHandler());
+
+        System.out.println("\nValidating order...");
+        boolean isValid = validationChain.validate(currentOrder, deliveryAddress);
+
+        if (!isValid) {
+            System.out.println("\nOrder could not be processed due to validation errors.");
+            return;
         }
 
         System.out.println("\n--- Payment Method (ADAPTER PATTERN) ---");
